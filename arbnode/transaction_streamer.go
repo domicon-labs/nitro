@@ -1050,6 +1050,28 @@ func (s *TransactionStreamer) writeMessages(pos arbutil.MessageIndex, messages [
 	}
 
 	if s.broadcastServer != nil {
+		messageResults := make([]*execution.MessageResult, 0, len(messages))
+		for i := 0; i < len(messages); i += 1 {
+			count := pos + arbutil.MessageIndex(i) + 1
+			messageResult, err := s.ResultAtCount(count)
+			if err != nil {
+				return fmt.Errorf("error when retrieving result for pos=%v, count=%v: %w", pos, count, err)
+			}
+			messageResults = append(messageResults, messageResult)
+
+			log.Error(
+				"writeMessages getMessageResults",
+				"pos", pos,
+				"i", i,
+				"count", count,
+				"messageResult.BlockHash", messageResult.BlockHash,
+			)
+		}
+		log.Error(
+			"writeMessages getMessageResults",
+			"messageResults", messageResults,
+		)
+
 		if err := s.broadcastServer.BroadcastMessages(messages, pos); err != nil {
 			log.Error("failed broadcasting message", "pos", pos, "err", err)
 		}
