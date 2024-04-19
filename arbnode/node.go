@@ -640,6 +640,7 @@ func createNodeImpl(
 			challengemanager.WithAssertionConfirmingInterval(confirmingInterval),
 			challengemanager.WithEdgeTrackerWakeInterval(edgeWakeInterval),
 			challengemanager.WithAddress(txOptsValidator.From),
+			challengemanager.WithTrackChallengeParentAssertionHashes(config.Bold.TrackChallengeParentAssertionHashes),
 		}
 		if config.Bold.API {
 			opts = append(opts, challengemanager.WithAPIEnabled(fmt.Sprintf("%s:%d", config.Bold.APIHost, config.Bold.APIPort), config.Bold.APIDBPath))
