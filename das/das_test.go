@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/nitro/arbstate"
 	"github.com/offchainlabs/nitro/util/testhelpers"
 )
 
@@ -63,7 +64,12 @@ func testDASStoreRetrieveMultipleInstances(t *testing.T, storageType string) {
 	if cert.Timeout != timeout {
 		Fail(t, fmt.Sprintf("Expected timeout of %d in cert, was %d", timeout, cert.Timeout))
 	}
-
+	data := Serialize(cert)
+	tmpcert, err := arbstate.DeserializeDASCertFrom(bytes.NewReader(data))
+	data2 := Serialize(tmpcert)
+	if !bytes.Equal(data, data2) {
+		Fail(t, "de/serialize is error")
+	}
 	messageRetrieved, err := daReader.GetByHash(firstCtx, cert.DataHash)
 	Require(t, err, "Failed to retrieve message")
 	if !bytes.Equal(messageSaved, messageRetrieved) {

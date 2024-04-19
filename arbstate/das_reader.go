@@ -86,6 +86,9 @@ func IsKnownHeaderByte(b uint8) bool {
 type DataAvailabilityCertificate struct {
 	KeysetHash  [32]byte
 	DataHash    [32]byte
+	CommitMent  [48]byte // domicon DA CM
+	UserAddr    [20]byte // domicon user
+	UserIndex   [8]byte  // domicon user index
 	Timeout     uint64
 	SignersMask uint64
 	Sig         blsSignatures.Signature
@@ -128,6 +131,21 @@ func DeserializeDASCertFrom(rd io.Reader) (c *DataAvailabilityCertificate, err e
 			return nil, err
 		}
 		c.Version = versionBuf[0]
+	}
+
+	_, err = io.ReadFull(r, c.CommitMent[:])
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = io.ReadFull(r, c.UserAddr[:])
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = io.ReadFull(r, c.UserIndex[:])
+	if err != nil {
+		return nil, err
 	}
 
 	var signersMaskBuf [8]byte
