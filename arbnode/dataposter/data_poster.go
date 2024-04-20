@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"math"
 	"math/big"
 	"net/http"
@@ -85,6 +86,10 @@ type DataPoster struct {
 	errorCount map[uint64]int // number of consecutive intermittent errors rbf-ing or sending, per nonce
 
 	maxFeeCapExpression *govaluate.EvaluableExpression
+
+	domiconIdxMutex sync.Mutex
+	index           *uint64
+	domiconCli      *rpc.Client
 }
 
 // signerFn is a signer function callback when a contract requires a method to
@@ -375,6 +380,36 @@ func (p *DataPoster) waitForL1Finality() bool {
 	return p.config().WaitForL1Finality && !p.headerReader.IsParentChainArbitrum()
 }
 
+func (p *DataPoster) SendDA2Domicon(ctx context.Context, index, length uint64, broadcaster, user common.Address, commitment, sign, data hexutil.Bytes) error {
+	return p.sendDA2Domicon(ctx, index, length, broadcaster, user, commitment, sign, data)
+}
+
+func (p *DataPoster) sendDA2Domicon(ctx context.Context, index, length uint64, broadcaster, user common.Address, commitment, sign, data hexutil.Bytes) error {
+	var result common.Hash
+	err := p.domiconCli.CallContext(ctx, &result, "optimism_sendDA", index, length, 0, broadcaster, user, commitment, sign, data)
+	return err
+}
+
+func (p *DataPoster) getNextDomiconIndex(domiconCommitSMC *bind.BoundContract, userAddr common.Address) error {
+	if p.index == nil {
+		results := new([]interface{})
+		err := domiconCommitSMC.Call(&bind.CallOpts{}, results, "indices", userAddr)
+		if err != nil {
+			return fmt.Errorf("call domicon commitment contract failed: %w", err)
+		}
+		index := *abi.ConvertType((*results)[0], new(big.Int)).(*big.Int)
+		if !index.IsUint64() {
+			return fmt.Errorf("index is not uint64: %w", err)
+		}
+		tmpIndex := index.Uint64()
+		log.Info("getNextDomiconIndex from contract successed", "user", userAddr, "index", tmpIndex)
+		p.index = &tmpIndex
+	} else {
+		*p.index++
+	}
+	return nil
+}
+
 // Requires the caller hold the mutex.
 // Returns the next nonce, its metadata if stored, a bool indicating if the metadata is present, the cumulative weight, and an error if present.
 // Unlike GetNextNonceAndMeta, this does not call the metadataRetriever if the metadata is not stored in the queue.
@@ -411,6 +446,13 @@ func (p *DataPoster) getNextNonceAndMaybeMeta(ctx context.Context, thisWeight ui
 		p.nonce = nonce
 	}
 	return p.nonce, nil, false, p.nonce, nil
+}
+
+func (p *DataPoster) GetNextIndex(domiconCommitSMC *bind.BoundContract, userAddr common.Address) (uint64, error) {
+	p.domiconIdxMutex.Lock()
+	defer p.domiconIdxMutex.Unlock()
+	err := p.getNextDomiconIndex(domiconCommitSMC, userAddr)
+	return *p.index, err
 }
 
 // GetNextNonceAndMeta retrieves generates next nonce, validates that a

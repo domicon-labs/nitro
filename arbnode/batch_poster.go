@@ -6,9 +6,13 @@ package arbnode
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	kzg_sdk "github.com/domicon-labs/kzg-sdk"
+	"github.com/offchainlabs/nitro/blsSignatures"
 	"math"
 	"math/big"
 	"strings"
@@ -103,6 +107,9 @@ type BatchPoster struct {
 	nextRevertCheckBlock int64       // the last parent block scanned for reverting batches
 
 	accessList func(SequencerInboxAccs, AfterDelayedMessagesRead int) types.AccessList
+
+	domiconCommitmentContract *bind.BoundContract
+	domiconKZGSDK             kzg_sdk.DomiconSdk
 }
 
 type l1BlockBound int
@@ -1194,32 +1201,84 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 		return false, nil
 	}
 
-	if b.daWriter != nil {
-		if !b.redisLock.AttemptLock(ctx) {
-			return false, errAttemptLockFailed
-		}
-
-		gotNonce, gotMeta, err := b.dataPoster.GetNextNonceAndMeta(ctx)
-		if err != nil {
-			return false, err
-		}
-		if nonce != gotNonce || !bytes.Equal(batchPositionBytes, gotMeta) {
-			return false, fmt.Errorf("%w: nonce changed from %d to %d while creating batch", storage.ErrStorageRace, nonce, gotNonce)
-		}
-
-		cert, err := b.daWriter.Store(ctx, sequencerMsg, uint64(time.Now().Add(config.DASRetentionPeriod).Unix()), []byte{}) // b.daWriter will append signature if enabled
-		if errors.Is(err, das.BatchToDasFailed) {
-			if config.DisableDasFallbackStoreDataOnChain {
-				return false, errors.New("unable to batch to DAS and fallback storing data on chain is disabled")
-			}
-			log.Warn("Falling back to storing data on chain", "err", err)
-		} else if err != nil {
-			return false, err
-		} else {
-			sequencerMsg = das.Serialize(cert)
-		}
+	// send data to domicon
+	domiconBroadcaster := common.HexToAddress("todo")
+	userAddr := common.HexToAddress("todo")
+	curIndex, err := b.dataPoster.GetNextIndex(b.domiconCommitmentContract, userAddr)
+	if err != nil {
+		log.Debug("call GetNextIndex failed", err)
+		return false, nil
+	}
+	log.Info("msg", "current user", userAddr, "current index", curIndex)
+	digest, err := b.domiconKZGSDK.GenerateDataCommit(sequencerMsg)
+	if err != nil {
+		log.Debug("generate data commit failed", err)
+		return false, nil
+	}
+	dataCM := digest.Bytes()
+	dataLen := len(sequencerMsg)
+	singer := kzg_sdk.NewEIP155FdSigner(big.NewInt(11155111))
+	privateKey := &ecdsa.PrivateKey{} // todo
+	sigHash, sigData, err := kzg_sdk.SignFd(userAddr, domiconBroadcaster, 0, curIndex, uint64(dataLen), dataCM[:], singer, privateKey)
+	if err != nil {
+		log.Debug("msg", "SignFd failed", err)
+		return false, nil
+	}
+	log.Info("SignFd", "sig hash", sigHash)
+	err = b.dataPoster.SendDA2Domicon(ctx, curIndex, uint64(dataLen), domiconBroadcaster, userAddr, hexutil.Bytes(dataCM[:]), hexutil.Bytes(sigData), hexutil.Bytes(sequencerMsg))
+	if err != nil {
+		log.Debug("msg", "SendDA2Domicon failed", err)
+		return false, nil
 	}
 
+	var indexBytes [8]byte
+	binary.BigEndian.PutUint64(indexBytes[:], curIndex)
+	blsSignaturesBuf := [96]byte{0}
+	sig, err := blsSignatures.SignatureFromBytes(blsSignaturesBuf[:])
+	if err != nil {
+		return false, err
+	}
+
+	cert := arbstate.DataAvailabilityCertificate{
+		KeysetHash:  common.Hash{},
+		DataHash:    common.Hash{},
+		CommitMent:  dataCM,
+		UserAddr:    userAddr,
+		UserIndex:   indexBytes,
+		Timeout:     uint64(0),
+		SignersMask: uint64(0),
+		Sig:         sig,
+		Version:     uint8(0),
+	}
+	sequencerMsg = das.Serialize(&cert)
+
+	/*
+		if b.daWriter != nil {
+			if !b.redisLock.AttemptLock(ctx) {
+				return false, errAttemptLockFailed
+			}
+
+			gotNonce, gotMeta, err := b.dataPoster.GetNextNonceAndMeta(ctx)
+			if err != nil {
+				return false, err
+			}
+			if nonce != gotNonce || !bytes.Equal(batchPositionBytes, gotMeta) {
+				return false, fmt.Errorf("%w: nonce changed from %d to %d while creating batch", storage.ErrStorageRace, nonce, gotNonce)
+			}
+
+			cert, err := b.daWriter.Store(ctx, sequencerMsg, uint64(time.Now().Add(config.DASRetentionPeriod).Unix()), []byte{}) // b.daWriter will append signature if enabled
+			if errors.Is(err, das.BatchToDasFailed) {
+				if config.DisableDasFallbackStoreDataOnChain {
+					return false, errors.New("unable to batch to DAS and fallback storing data on chain is disabled")
+				}
+				log.Warn("Falling back to storing data on chain", "err", err)
+			} else if err != nil {
+				return false, err
+			} else {
+				sequencerMsg = das.Serialize(cert)
+			}
+		}
+	*/
 	data, kzgBlobs, err := b.encodeAddBatch(new(big.Int).SetUint64(batchPosition.NextSeqNum), batchPosition.MessageCount, b.building.msgCount, sequencerMsg, b.building.segments.delayedMsg, b.building.use4844)
 	if err != nil {
 		return false, err

@@ -88,7 +88,7 @@ type DataAvailabilityCertificate struct {
 	DataHash    [32]byte
 	CommitMent  [48]byte // domicon DA CM
 	UserAddr    [20]byte // domicon user
-	UserIndex   [8]byte  // domicon user index
+	UserIndex   uint64   // domicon user index
 	Timeout     uint64
 	SignersMask uint64
 	Sig         blsSignatures.Signature
