@@ -43,11 +43,12 @@ type DataAvailabilityConfig struct {
 	LocalCache CacheConfig `koanf:"local-cache"`
 	RedisCache RedisConfig `koanf:"redis-cache"`
 
-	LocalDBStorage     LocalDBStorageConfig     `koanf:"local-db-storage"`
-	LocalFileStorage   LocalFileStorageConfig   `koanf:"local-file-storage"`
-	S3Storage          S3StorageServiceConfig   `koanf:"s3-storage"`
-	IpfsStorage        IpfsStorageServiceConfig `koanf:"ipfs-storage"`
-	RegularSyncStorage RegularSyncStorageConfig `koanf:"regular-sync-storage"`
+	LocalDBStorage     LocalDBStorageConfig        `koanf:"local-db-storage"`
+	LocalFileStorage   LocalFileStorageConfig      `koanf:"local-file-storage"`
+	S3Storage          S3StorageServiceConfig      `koanf:"s3-storage"`
+	IpfsStorage        IpfsStorageServiceConfig    `koanf:"ipfs-storage"`
+	DomiconStorage     DomiconStorageServiceConfig `koanf:"domicon-storage"`
+	RegularSyncStorage RegularSyncStorageConfig    `koanf:"regular-sync-storage"`
 
 	Key KeyConfig `koanf:"key"`
 
@@ -70,6 +71,7 @@ var DefaultDataAvailabilityConfig = DataAvailabilityConfig{
 	ParentChainConnectionAttempts: 15,
 	PanicOnError:                  false,
 	IpfsStorage:                   DefaultIpfsStorageServiceConfig,
+	DomiconStorage:                DefaultDomiconStorageServiceConfig,
 }
 
 func OptionalAddressFromString(s string) (*common.Address, error) {
@@ -131,6 +133,7 @@ func dataAvailabilityConfigAddOptions(prefix string, f *flag.FlagSet, r role) {
 
 	// Both the Nitro node and daserver can use these options.
 	IpfsStorageServiceConfigAddOptions(prefix+".ipfs-storage", f)
+	DomiconStorageServiceConfigAddOptions(prefix+".domicon-storage", f)
 	RestfulClientAggregatorConfigAddOptions(prefix+".rest-aggregator", f)
 
 	f.String(prefix+".parent-chain-node-url", DefaultDataAvailabilityConfig.ParentChainNodeURL, "URL for parent chain node, only used in standalone daserver; when running as part of a node that node's L1 configuration is used")

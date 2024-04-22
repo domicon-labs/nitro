@@ -87,6 +87,15 @@ func CreatePersistentStorageService(
 		storageServices = append(storageServices, s)
 	}
 
+	if config.DomiconStorage.Enable {
+		s, err := NewDomiconStorageService(ctx, config.DomiconStorage)
+		if err != nil {
+			return nil, nil, err
+		}
+		lifecycleManager.Register(s)
+		storageServices = append(storageServices, s)
+	}
+
 	if len(storageServices) > 1 {
 		s, err := NewRedundantStorageService(ctx, storageServices)
 		if err != nil {
