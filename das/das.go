@@ -151,11 +151,14 @@ func Serialize(c *arbstate.DataAvailabilityCertificate) []byte {
 	buf = append(buf, c.SerializeSignableFields()...)
 	buf = append(buf, c.CommitMent[:]...)
 	buf = append(buf, c.UserAddr[:]...)
-	buf = append(buf, c.UserIndex[:]...)
 
-	var intData [8]byte
-	binary.BigEndian.PutUint64(intData[:], c.SignersMask)
-	buf = append(buf, intData[:]...)
+	var userIndexData [8]byte
+	binary.BigEndian.PutUint64(userIndexData[:], c.UserIndex)
+	buf = append(buf, userIndexData[:]...)
+
+	var signersMaskData [8]byte
+	binary.BigEndian.PutUint64(signersMaskData[:], c.SignersMask)
+	buf = append(buf, signersMaskData[:]...)
 
 	return append(buf, blsSignatures.SignatureToBytes(c.Sig)...)
 }
