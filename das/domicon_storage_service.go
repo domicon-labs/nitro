@@ -1,10 +1,14 @@
 package das
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/offchainlabs/nitro/arbstate"
 	"github.com/offchainlabs/nitro/util/pretty"
+	"net/http"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -41,113 +45,106 @@ func NewDomiconStorageService(ctx context.Context, config DomiconStorageServiceC
 func (s *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
 	log.Trace("das.DomiconStorageService.GetByHash", "hash", pretty.PrettyHash(hash))
 
-	return nil, nil
+	id := 0
+	method := "eth_getFileDataByCommitment"
+	params := []string{hash.String()}
 
-	//oracle := func(h common.Hash) ([]byte, error) {
-	//	thisCid, err := hashToCid(h)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	ipfsPath := path.IpfsPath(thisCid)
-	//	log.Trace("Retrieving IPFS path", "path", ipfsPath.String())
-	//
-	//	parentCtx := ctx
-	//	if doPin {
-	//		// If we want to pin this batch, then detach from the parent context so
-	//		// we are not canceled before s.config.ReadTimeout.
-	//		parentCtx = context.Background()
-	//	}
-	//
-	//	timeoutCtx, cancel := context.WithTimeout(parentCtx, s.config.ReadTimeout)
-	//	defer cancel()
-	//	rdr, err := s.ipfsApi.Block().Get(timeoutCtx, ipfsPath)
-	//	if err != nil {
-	//		if timeoutCtx.Err() != nil {
-	//			return nil, ErrNotFound
-	//		}
-	//		return nil, err
-	//	}
-	//
-	//	data, err := io.ReadAll(rdr)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	if doPin {
-	//		go func() {
-	//			pinCtx, pinCancel := context.WithTimeout(context.Background(), s.config.ReadTimeout)
-	//			defer pinCancel()
-	//			err := s.ipfsApi.Pin().Add(pinCtx, ipfsPath)
-	//			// Recursive pinning not needed, each dastree preimage fits in a single
-	//			// IPFS block.
-	//			if err != nil {
-	//				// Pinning is best-effort.
-	//				log.Warn("Failed to pin in IPFS", "hash", pretty.PrettyHash(hash), "path", ipfsPath.String())
-	//			} else {
-	//				log.Trace("Pin in IPFS successful", "hash", pretty.PrettyHash(hash), "path", ipfsPath.String())
-	//			}
-	//		}()
-	//	}
-	//
-	//	return data, nil
-	//}
+	// 准备 JSON 数据
+	jsonStr := []byte(fmt.Sprintf(`{"id":%d,"jsonrpc":"2.0","method":"%s","params":%q}`, id, method, params))
 
-	//return dastree.Content(hash, oracle)
+	// 发送 POST 请求
+	resp, err := http.Post(s.config.Peer, "application/json", bytes.NewBuffer(jsonStr))
+	if err != nil {
+		log.Warn("Error sending request:", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// 读取响应内容
+	var respBody bytes.Buffer
+	_, err = respBody.ReadFrom(resp.Body)
+	if err != nil {
+		log.Warn("Error reading response:", err)
+		return nil, err
+	}
+
+	log.Trace("Response:", respBody.String())
+
+	return respBody.Bytes(), nil
 }
 
-//func NewDomiconStorageServiceFromURL(url string) (*DomiconStorageService, error) {
-//	if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-//		return nil, fmt.Errorf("protocol prefix 'http://' or 'https://' must be specified for DomiconStorageService; got '%s'", url)
+func (s *DomiconStorageService) Put(ctx context.Context, data []byte, timeout uint64) error {
+	return nil
+}
+
+func (s *DomiconStorageService) ExpirationPolicy(ctx context.Context) (arbstate.ExpirationPolicy, error) {
+	return arbstate.KeepForever, nil
+}
+
+func (s *DomiconStorageService) Sync(ctx context.Context) error {
+	return nil
+}
+
+func (s *DomiconStorageService) Close(ctx context.Context) error {
+	return nil
+}
+
+func (s *DomiconStorageService) String() string {
+	return "DomiconStorageService"
+}
+
+//	func NewDomiconStorageServiceFromURL(url string) (*DomiconStorageService, error) {
+//		if !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
+//			return nil, fmt.Errorf("protocol prefix 'http://' or 'https://' must be specified for DomiconStorageService; got '%s'", url)
 //
-//	}
-//	return &DomiconStorageService{
-//		url: url,
-//	}, nil
-//}
-//
-//func (c *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
-//	res, err := http.Get(c.url + getByHashRequestPath + EncodeStorageServiceKey(hash))
-//	if err != nil {
-//		return nil, err
-//	}
-//	if res.StatusCode != http.StatusOK {
-//		return nil, fmt.Errorf("HTTP error with status %d returned by server: %s", res.StatusCode, http.StatusText(res.StatusCode))
-//	}
-//
-//	body, err := io.ReadAll(res.Body)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	var response RestfulDasServerResponse
-//	err = json.Unmarshal(body, &response)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewReader([]byte(response.Data)))
-//	decodedBytes, err := io.ReadAll(decoder)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !dastree.ValidHash(hash, decodedBytes) {
-//		return nil, arbstate.ErrHashMismatch
+//		}
+//		return &DomiconStorageService{
+//			url: url,
+//		}, nil
 //	}
 //
-//	return decodedBytes, nil
-//}
+//	func (c *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
+//		res, err := http.Get(c.url + getByHashRequestPath + EncodeStorageServiceKey(hash))
+//		if err != nil {
+//			return nil, err
+//		}
+//		if res.StatusCode != http.StatusOK {
+//			return nil, fmt.Errorf("HTTP error with status %d returned by server: %s", res.StatusCode, http.StatusText(res.StatusCode))
+//		}
 //
-//func (c *DomiconStorageService) HealthCheck(ctx context.Context) error {
-//	res, err := http.Get(c.url + healthRequestPath)
-//	if err != nil {
-//		return err
+//		body, err := io.ReadAll(res.Body)
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		var response RestfulDasServerResponse
+//		err = json.Unmarshal(body, &response)
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewReader([]byte(response.Data)))
+//		decodedBytes, err := io.ReadAll(decoder)
+//		if err != nil {
+//			return nil, err
+//		}
+//		if !dastree.ValidHash(hash, decodedBytes) {
+//			return nil, arbstate.ErrHashMismatch
+//		}
+//
+//		return decodedBytes, nil
 //	}
-//	if res.StatusCode != http.StatusOK {
-//		return fmt.Errorf("HTTP error with status %d returned by server: %s", res.StatusCode, http.StatusText(res.StatusCode))
-//	}
-//	return nil
-//}
+func (c *DomiconStorageService) HealthCheck(ctx context.Context) error {
+	//res, err := http.Get(c.url + healthRequestPath)
+	//if err != nil {
+	//	return err
+	//}
+	//if res.StatusCode != http.StatusOK {
+	//	return fmt.Errorf("HTTP error with status %d returned by server: %s", res.StatusCode, http.StatusText(res.StatusCode))
+	//}
+	return nil
+}
+
 //
 //func (c *DomiconStorageService) ExpirationPolicy(ctx context.Context) (arbstate.ExpirationPolicy, error) {
 //	res, err := http.Get(c.url + expirationPolicyRequestPath)
