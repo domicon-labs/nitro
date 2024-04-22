@@ -146,6 +146,10 @@ func (dbs *DBStorageService) GetByHash(ctx context.Context, key common.Hash) ([]
 	return ret, err
 }
 
+func (dbs *DBStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (dbs *DBStorageService) Put(ctx context.Context, data []byte, timeout uint64) error {
 	logPut("das.DBStorageService.Put", data, timeout, dbs)
 

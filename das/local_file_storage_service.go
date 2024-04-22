@@ -69,6 +69,10 @@ func (s *LocalFileStorageService) GetByHash(ctx context.Context, key common.Hash
 	return data, nil
 }
 
+func (s *LocalFileStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (s *LocalFileStorageService) Put(ctx context.Context, data []byte, timeout uint64) error {
 	logPut("das.LocalFileStorageService.Store", data, timeout, s)
 	fileName := EncodeStorageServiceKey(dastree.Hash(data))

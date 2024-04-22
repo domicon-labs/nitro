@@ -168,6 +168,10 @@ func (s *IpfsStorageService) GetByHash(ctx context.Context, hash common.Hash) ([
 	return dastree.Content(hash, oracle)
 }
 
+func (s *IpfsStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 // Put stores all the preimages required to reconstruct the dastree for single batch,
 // ie the hashed data chunks and dastree nodes.
 // This takes advantage of IPFS supporting keccak256 on raw data blocks for calculating

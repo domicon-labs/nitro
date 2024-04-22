@@ -21,6 +21,7 @@ import (
 
 type DataAvailabilityReader interface {
 	GetByHash(ctx context.Context, hash common.Hash) ([]byte, error)
+	GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error)
 	ExpirationPolicy(ctx context.Context) (ExpirationPolicy, error)
 }
 

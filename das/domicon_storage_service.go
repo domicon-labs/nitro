@@ -3,6 +3,7 @@ package das
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -42,11 +43,15 @@ func NewDomiconStorageService(ctx context.Context, config DomiconStorageServiceC
 }
 
 func (s *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
-	log.Trace("das.DomiconStorageService.GetByHash", "hash", hash.String())
+	return nil, nil
+}
+
+func (s *DomiconStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	log.Trace("das.DomiconStorageService.GetByCommitment", "commitment", hex.EncodeToString(commitment))
 
 	id := 0
 	method := "eth_getFileDataByCommitment"
-	params := []string{hash.String()}
+	params := []string{hex.EncodeToString(commitment)}
 
 	// 准备 JSON 数据
 	jsonStr := []byte(fmt.Sprintf(`{"id":%d,"jsonrpc":"2.0","method":"%s","params":%q}`, id, method, params))
@@ -92,6 +97,6 @@ func (s *DomiconStorageService) String() string {
 	return "DomiconStorageService"
 }
 
-func (c *DomiconStorageService) HealthCheck(ctx context.Context) error {
+func (s *DomiconStorageService) HealthCheck(ctx context.Context) error {
 	return nil
 }

@@ -71,6 +71,10 @@ func (c *RestfulDasClient) GetByHash(ctx context.Context, hash common.Hash) ([]b
 	return decodedBytes, nil
 }
 
+func (c *RestfulDasClient) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (c *RestfulDasClient) HealthCheck(ctx context.Context) error {
 	res, err := http.Get(c.url + healthRequestPath)
 	if err != nil {

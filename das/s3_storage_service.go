@@ -108,6 +108,10 @@ func (s3s *S3StorageService) GetByHash(ctx context.Context, key common.Hash) ([]
 	return buf.Bytes(), err
 }
 
+func (s3s *S3StorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (s3s *S3StorageService) Put(ctx context.Context, value []byte, timeout uint64) error {
 	logPut("das.S3StorageService.Store", value, timeout, s3s)
 	putObjectInput := s3.PutObjectInput{

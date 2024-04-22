@@ -42,6 +42,10 @@ func (m *MemoryBackedStorageService) GetByHash(ctx context.Context, key common.H
 	return res, nil
 }
 
+func (m *MemoryBackedStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (m *MemoryBackedStorageService) Put(ctx context.Context, data []byte, expirationTime uint64) error {
 	logPut("das.MemoryBackedStorageService.Store", data, expirationTime, m)
 	m.rwmutex.Lock()

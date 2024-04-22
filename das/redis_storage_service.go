@@ -124,6 +124,10 @@ func (rs *RedisStorageService) GetByHash(ctx context.Context, key common.Hash) (
 	return ret, err
 }
 
+func (rs *RedisStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (rs *RedisStorageService) Put(ctx context.Context, value []byte, timeout uint64) error {
 	logPut("das.RedisStorageService.Store", value, timeout, rs)
 	err := rs.baseStorageService.Put(ctx, value, timeout)

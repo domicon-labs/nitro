@@ -60,6 +60,10 @@ func (r *RedundantStorageService) GetByHash(ctx context.Context, key common.Hash
 	return nil, anyError
 }
 
+func (r *RedundantStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (r *RedundantStorageService) Put(ctx context.Context, data []byte, expirationTime uint64) error {
 	logPut("das.RedundantStorageService.Store", data, expirationTime, r)
 	var wg sync.WaitGroup
