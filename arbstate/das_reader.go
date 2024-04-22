@@ -143,10 +143,12 @@ func DeserializeDASCertFrom(rd io.Reader) (c *DataAvailabilityCertificate, err e
 		return nil, err
 	}
 
-	_, err = io.ReadFull(r, c.UserIndex[:])
+	var userIndexBuf [8]byte
+	_, err = io.ReadFull(r, userIndexBuf[:])
 	if err != nil {
 		return nil, err
 	}
+	c.UserIndex = binary.BigEndian.Uint64(userIndexBuf[:])
 
 	var signersMaskBuf [8]byte
 	_, err = io.ReadFull(r, signersMaskBuf[:])

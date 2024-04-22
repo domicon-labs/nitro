@@ -13,6 +13,7 @@ import (
 	"fmt"
 	kzg_sdk "github.com/domicon-labs/kzg-sdk"
 	"github.com/offchainlabs/nitro/blsSignatures"
+	"github.com/offchainlabs/nitro/domicon"
 	"math"
 	"math/big"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -69,6 +71,8 @@ const (
 
 	sequencerBatchPostMethodName          = "addSequencerL2BatchFromOrigin0"
 	sequencerBatchPostWithBlobsMethodName = "addSequencerL2BatchFromBlobs"
+
+	dSrsSize = 1 << 16
 )
 
 type batchPosterPosition struct {
@@ -109,7 +113,7 @@ type BatchPoster struct {
 	accessList func(SequencerInboxAccs, AfterDelayedMessagesRead int) types.AccessList
 
 	domiconCommitmentContract *bind.BoundContract
-	domiconKZGSDK             kzg_sdk.DomiconSdk
+	domiconKZGSDK             *kzg_sdk.DomiconSdk
 }
 
 type l1BlockBound int
@@ -308,21 +312,39 @@ func NewBatchPoster(ctx context.Context, opts *BatchPosterOpts) (*BatchPoster, e
 	if err != nil {
 		return nil, err
 	}
+
+	domiconCommitAbi, err := abi.JSON(strings.NewReader(domicon.L1DomiconCommitment))
+	if err != nil {
+		return nil, err
+	}
+	domiconCommitmentContract := bind.NewBoundContract(
+		common.HexToAddress("0x45a85Ad5F88DD7fFb7419FE445e95Ff48D167F5A"),
+		domiconCommitAbi,
+		opts.L1Reader.Client(),
+		opts.L1Reader.Client(),
+		nil)
+
+	domiconKZGSdk, err := kzg_sdk.InitDomiconSdk(dSrsSize, "/config/srs")
+	if err != nil {
+		return nil, err
+	}
 	b := &BatchPoster{
-		l1Reader:           opts.L1Reader,
-		inbox:              opts.Inbox,
-		streamer:           opts.Streamer,
-		arbOSVersionGetter: opts.VersionGetter,
-		syncMonitor:        opts.SyncMonitor,
-		config:             opts.Config,
-		bridge:             bridge,
-		seqInbox:           seqInbox,
-		seqInboxABI:        seqInboxABI,
-		seqInboxAddr:       opts.DeployInfo.SequencerInbox,
-		gasRefunderAddr:    opts.Config().gasRefunder,
-		bridgeAddr:         opts.DeployInfo.Bridge,
-		daWriter:           opts.DAWriter,
-		redisLock:          redisLock,
+		l1Reader:                  opts.L1Reader,
+		inbox:                     opts.Inbox,
+		streamer:                  opts.Streamer,
+		arbOSVersionGetter:        opts.VersionGetter,
+		syncMonitor:               opts.SyncMonitor,
+		config:                    opts.Config,
+		bridge:                    bridge,
+		seqInbox:                  seqInbox,
+		seqInboxABI:               seqInboxABI,
+		seqInboxAddr:              opts.DeployInfo.SequencerInbox,
+		gasRefunderAddr:           opts.Config().gasRefunder,
+		bridgeAddr:                opts.DeployInfo.Bridge,
+		daWriter:                  opts.DAWriter,
+		redisLock:                 redisLock,
+		domiconCommitmentContract: domiconCommitmentContract,
+		domiconKZGSDK:             domiconKZGSdk,
 	}
 	b.messagesPerBatch, err = arbmath.NewMovingAverage[uint64](20)
 	if err != nil {
@@ -1202,8 +1224,11 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 	}
 
 	// send data to domicon
-	domiconBroadcaster := common.HexToAddress("todo")
-	userAddr := common.HexToAddress("todo")
+	domBroadcasterAddr := "0x1845b7295ae3EE0fc4b5fe60c05ea81637603764"
+	batchPosterAddr := "0xf2fa2c2e6b3399237e0d5c413d21e37cf4db23b0"
+	batchPosterPrivatekey := "e211013774caa4406301b9e509d62caf012c4cc91a9f16dd81f2f42bb764065f" // do not need 0x
+	domiconBroadcaster := common.HexToAddress(domBroadcasterAddr)
+	userAddr := common.HexToAddress(batchPosterAddr)
 	curIndex, err := b.dataPoster.GetNextIndex(b.domiconCommitmentContract, userAddr)
 	if err != nil {
 		log.Debug("call GetNextIndex failed", err)
@@ -1218,7 +1243,21 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 	dataCM := digest.Bytes()
 	dataLen := len(sequencerMsg)
 	singer := kzg_sdk.NewEIP155FdSigner(big.NewInt(11155111))
-	privateKey := &ecdsa.PrivateKey{} // todo
+
+	pkBytes, err := hex.DecodeString(batchPosterPrivatekey)
+	if err != nil {
+		return false, nil
+	}
+	privateKeyInt := new(big.Int).SetBytes(pkBytes)
+	privateKey := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: secp256k1.S256(),
+			X:     nil,
+			Y:     nil,
+		},
+		D: privateKeyInt,
+	}
+
 	sigHash, sigData, err := kzg_sdk.SignFd(userAddr, domiconBroadcaster, 0, curIndex, uint64(dataLen), dataCM[:], singer, privateKey)
 	if err != nil {
 		log.Debug("msg", "SignFd failed", err)
@@ -1230,22 +1269,23 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 		log.Debug("msg", "SendDA2Domicon failed", err)
 		return false, nil
 	}
-
+	log.Info("SendDA2Domicon success")
 	var indexBytes [8]byte
 	binary.BigEndian.PutUint64(indexBytes[:], curIndex)
 	blsSignaturesBuf := [96]byte{0}
 	sig, err := blsSignatures.SignatureFromBytes(blsSignaturesBuf[:])
 	if err != nil {
+		log.Debug("SignatureFromBytes", "error", err)
 		return false, err
 	}
 
 	cert := arbstate.DataAvailabilityCertificate{
-		KeysetHash:  common.Hash{},
-		DataHash:    common.Hash{},
+		KeysetHash:  common.HexToHash("0x4D795E20D33EEA0B070600E4E100C512A750562BF03C300C99444BD5AF92D9B0"),
+		DataHash:    common.HexToHash("0xf8bb9a67839d1767e79afe52d21e97a04ee0bf5f816d5b52c10df60cccb7f822"),
 		CommitMent:  dataCM,
 		UserAddr:    userAddr,
-		UserIndex:   indexBytes,
-		Timeout:     uint64(0),
+		UserIndex:   curIndex,
+		Timeout:     uint64(time.Now().Add(time.Hour * 24).Unix()),
 		SignersMask: uint64(0),
 		Sig:         sig,
 		Version:     uint8(0),
@@ -1287,6 +1327,7 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 		return false, fmt.Errorf("produced %v blobs for batch but a block can only hold %v", len(kzgBlobs), params.MaxBlobGasPerBlock/params.BlobTxBlobGasPerBlob)
 	}
 	accessList := b.accessList(int(batchPosition.NextSeqNum), int(b.building.segments.delayedMsg))
+	log.Info("tmplog for debug-1")
 	// On restart, we may be trying to estimate gas for a batch whose successor has
 	// already made it into pending state, if not latest state.
 	// In that case, we might get a revert with `DelayedBackwards()`.
@@ -1296,16 +1337,20 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 	// posts a new delayed message that we didn't see while gas estimating.
 	gasLimit, err := b.estimateGas(ctx, sequencerMsg, lastPotentialMsg.DelayedMessagesRead, data, kzgBlobs, nonce, accessList)
 	if err != nil {
+		log.Info("tmplog for debug-2", "err", err)
 		return false, err
 	}
+	log.Info("tmplog for debug-2")
 	newMeta, err := rlp.EncodeToBytes(batchPosterPosition{
 		MessageCount:        b.building.msgCount,
 		DelayedMessageCount: b.building.segments.delayedMsg,
 		NextSeqNum:          batchPosition.NextSeqNum + 1,
 	})
 	if err != nil {
+		log.Info("tmplog for debug-3", "error", err)
 		return false, err
 	}
+	log.Info("tmplog for debug-3")
 	tx, err := b.dataPoster.PostTransaction(ctx,
 		firstMsgTime,
 		nonce,
@@ -1318,6 +1363,7 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 		accessList,
 	)
 	if err != nil {
+		log.Info("tmplog for debug-4", "error", err)
 		return false, err
 	}
 	log.Info(

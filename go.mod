@@ -1,8 +1,6 @@
 module github.com/offchainlabs/nitro
 
-go 1.21.3
-
-toolchain go1.21.6
+go 1.20
 
 replace github.com/VictoriaMetrics/fastcache => ./fastcache
 
@@ -22,8 +20,9 @@ require (
 	github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
 	github.com/codeclysm/extract/v3 v3.0.2
 	github.com/dgraph-io/badger/v4 v4.2.0
+	github.com/domicon-labs/kzg-sdk v1.1.0
 	github.com/enescakir/emoji v1.0.0
-	github.com/ethereum/go-ethereum v1.13.1
+	github.com/ethereum/go-ethereum v1.13.15
 	github.com/fatih/structtag v1.2.0
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.6.0
@@ -99,7 +98,6 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/domicon-labs/kzg-sdk v1.1.0 // indirect
 	github.com/dop251/goja v0.0.0-20230806174421-c933cf95e127 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
