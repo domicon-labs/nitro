@@ -176,6 +176,13 @@ func NewDataPoster(ctx context.Context, opts *DataPosterOpts) (*DataPoster, erro
 	if err != nil {
 		return nil, fmt.Errorf("error creating govaluate evaluable expression for calculating maxFeeCap: %w", err)
 	}
+
+	domiconBroadcasterURL := "http://13.212.115.195:8547"
+	domiconCli, err := rpc.DialOptions(ctx, domiconBroadcasterURL)
+	if err != nil {
+		return nil, err
+	}
+
 	dp := &DataPoster{
 		headerReader: opts.HeaderReader,
 		client:       opts.HeaderReader.Client(),
@@ -193,6 +200,7 @@ func NewDataPoster(ctx context.Context, opts *DataPosterOpts) (*DataPoster, erro
 		maxFeeCapExpression:    expression,
 		extraBacklog:           opts.ExtraBacklog,
 		parentChainID:          opts.ParentChainID,
+		domiconCli:             domiconCli,
 	}
 	var overflow bool
 	dp.parentChainID256, overflow = uint256.FromBig(opts.ParentChainID)

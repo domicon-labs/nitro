@@ -1245,7 +1245,7 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 		CommitMent:  dataCM,
 		UserAddr:    userAddr,
 		UserIndex:   curIndex,
-		Timeout:     uint64(0),
+		Timeout:     uint64(time.Now().Add(time.Hour * 24).Unix()),
 		SignersMask: uint64(0),
 		Sig:         sig,
 		Version:     uint8(0),
