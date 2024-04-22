@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/nitro/solgen/go/yulgen"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -40,16 +41,16 @@ func deployBridgeCreator(ctx context.Context, l1Reader *headerreader.HeaderReade
 		return common.Address{}, fmt.Errorf("bridge deploy error: %w", err)
 	}
 
-	//reader4844, tx, _, err := yulgen.DeployReader4844(auth, client)
-	//err = andTxSucceeded(ctx, l1Reader, tx, err)
-	//if err != nil {
-	//	return common.Address{}, fmt.Errorf("blob basefee reader deploy error: %w", err)
-	//}
-	//seqInboxTemplate, tx, _, err := bridgegen.DeploySequencerInbox(auth, client, maxDataSize, reader4844, isUsingFeeToken)
-	//err = andTxSucceeded(ctx, l1Reader, tx, err)
-	//if err != nil {
-	//	return common.Address{}, fmt.Errorf("sequencer inbox deploy error: %w", err)
-	//}
+	reader4844, tx, _, err := yulgen.DeployReader4844(auth, client)
+	err = andTxSucceeded(ctx, l1Reader, tx, err)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("blob basefee reader deploy error: %w", err)
+	}
+	seqInboxTemplate, tx, _, err := bridgegen.DeploySequencerInbox(auth, client, maxDataSize, reader4844, isUsingFeeToken, common.HexToAddress("0x45a85Ad5F88DD7fFb7419FE445e95Ff48D167F5A"))
+	err = andTxSucceeded(ctx, l1Reader, tx, err)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("sequencer inbox deploy error: %w", err)
+	}
 
 	inboxTemplate, tx, _, err := bridgegen.DeployInbox(auth, client, maxDataSize)
 	err = andTxSucceeded(ctx, l1Reader, tx, err)
@@ -70,8 +71,8 @@ func deployBridgeCreator(ctx context.Context, l1Reader *headerreader.HeaderReade
 	}
 
 	ethBasedTemplates := rollupgen.BridgeCreatorBridgeContracts{
-		Bridge: bridgeTemplate,
-		//SequencerInbox:   seqInboxTemplate,
+		Bridge:           bridgeTemplate,
+		SequencerInbox:   seqInboxTemplate,
 		Inbox:            inboxTemplate,
 		RollupEventInbox: rollupEventBridgeTemplate,
 		Outbox:           outboxTemplate,
@@ -103,8 +104,8 @@ func deployBridgeCreator(ctx context.Context, l1Reader *headerreader.HeaderReade
 	}
 
 	erc20BasedTemplates := rollupgen.BridgeCreatorBridgeContracts{
-		Bridge: erc20BridgeTemplate,
-		//SequencerInbox:   seqInboxTemplate,
+		Bridge:           erc20BridgeTemplate,
+		SequencerInbox:   seqInboxTemplate,
 		Inbox:            erc20InboxTemplate,
 		RollupEventInbox: erc20RollupEventBridgeTemplate,
 		Outbox:           erc20OutboxTemplate,
