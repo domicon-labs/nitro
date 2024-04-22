@@ -26,6 +26,7 @@ type DataAvailabilityReader interface {
 }
 
 var ErrHashMismatch = errors.New("result does not match expected hash")
+var ErrCommitmentMismatch = errors.New("result does not match expected commitment")
 
 // DASMessageHeaderFlag indicates that this data is a certificate for the data availability service,
 // which will retrieve the full batch data.
