@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"net/http"
 	"testing"
@@ -49,7 +50,7 @@ func TestDomiconGetFileDataByCommitment2(t *testing.T) {
 	Require(t, err)
 
 	// 构建 JSON-RPC 请求体
-	var result map[string]interface{}
+	var result map[string]string
 	err = client.CallContext(context.Background(), &result, method, commitment)
 	Require(t, err)
 	t.Log(result)
@@ -72,4 +73,13 @@ func TestDomiconStorageServiceGet(t *testing.T) {
 	returnedData, err := svc.GetByCommitment(ctx, commitment)
 	Require(t, err)
 	t.Log(string(returnedData))
+}
+func TestConvert(t *testing.T) {
+	data1 := "0000000066274bf9"
+	t.Log(common.FromHex(data1))
+	t.Log(common.Bytes2Hex(common.FromHex(data1)))
+
+	data2 := "0x0000000066274bf9"
+	t.Log(common.FromHex(data2))
+	t.Log(common.Bytes2Hex(common.FromHex(data2)))
 }

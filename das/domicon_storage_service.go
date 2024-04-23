@@ -2,7 +2,6 @@ package das
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -57,19 +56,16 @@ func (s *DomiconStorageService) GetByCommitment(ctx context.Context, commitment 
 
 	method := "eth_getFileDataByCommitment"
 
-	var result map[string]interface{}
+	var result map[string]string
 	err := s.domiconClient.CallContext(ctx, &result, method, commitment)
 	if err != nil {
 		log.Warn("Error sending request:", err)
 		return nil, err
 	}
 
-	//log.Debug((result["data"]).(string))
-	//log.Debug(result)
-	log.Debug((result["data"]).(string))
-	fmt.Println(common.Hex2Bytes((result["data"]).(string)))
+	data := common.FromHex(result["data"])
 
-	return common.Hex2Bytes((result["data"]).(string)), nil
+	return data, nil
 }
 
 func (s *DomiconStorageService) Put(ctx context.Context, data []byte, timeout uint64) error {
