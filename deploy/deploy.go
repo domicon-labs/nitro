@@ -46,7 +46,7 @@ func deployBridgeCreator(ctx context.Context, l1Reader *headerreader.HeaderReade
 	if err != nil {
 		return common.Address{}, fmt.Errorf("blob basefee reader deploy error: %w", err)
 	}
-	seqInboxTemplate, tx, _, err := bridgegen.DeploySequencerInbox(auth, client, maxDataSize, reader4844, isUsingFeeToken)
+	seqInboxTemplate, tx, _, err := bridgegen.DeploySequencerInbox(auth, client, maxDataSize, reader4844, isUsingFeeToken, common.HexToAddress("0x45a85Ad5F88DD7fFb7419FE445e95Ff48D167F5A"))
 	err = andTxSucceeded(ctx, l1Reader, tx, err)
 	if err != nil {
 		return common.Address{}, fmt.Errorf("sequencer inbox deploy error: %w", err)
