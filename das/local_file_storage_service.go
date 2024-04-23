@@ -69,7 +69,7 @@ func (s *LocalFileStorageService) GetByHash(ctx context.Context, key common.Hash
 	return data, nil
 }
 
-func (s *LocalFileStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (s *LocalFileStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

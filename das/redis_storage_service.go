@@ -124,7 +124,7 @@ func (rs *RedisStorageService) GetByHash(ctx context.Context, key common.Hash) (
 	return ret, err
 }
 
-func (rs *RedisStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (rs *RedisStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

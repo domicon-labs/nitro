@@ -108,7 +108,7 @@ func (s3s *S3StorageService) GetByHash(ctx context.Context, key common.Hash) ([]
 	return buf.Bytes(), err
 }
 
-func (s3s *S3StorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (s3s *S3StorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

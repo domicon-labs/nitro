@@ -21,7 +21,7 @@ import (
 
 type DataAvailabilityReader interface {
 	GetByHash(ctx context.Context, hash common.Hash) ([]byte, error)
-	GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error)
+	GetByCommitment(ctx context.Context, commitment string) ([]byte, error)
 	ExpirationPolicy(ctx context.Context) (ExpirationPolicy, error)
 }
 
@@ -88,7 +88,7 @@ func IsKnownHeaderByte(b uint8) bool {
 type DataAvailabilityCertificate struct {
 	KeysetHash  [32]byte
 	DataHash    [32]byte
-	CommitMent  [48]byte // domicon DA CM
+	Commitment  [48]byte // domicon DA CM
 	UserAddr    [20]byte // domicon user
 	UserIndex   uint64   // domicon user index
 	Timeout     uint64
@@ -135,7 +135,7 @@ func DeserializeDASCertFrom(rd io.Reader) (c *DataAvailabilityCertificate, err e
 		c.Version = versionBuf[0]
 	}
 
-	_, err = io.ReadFull(r, c.CommitMent[:])
+	_, err = io.ReadFull(r, c.Commitment[:])
 	if err != nil {
 		return nil, err
 	}

@@ -42,7 +42,7 @@ func (m *MemoryBackedStorageService) GetByHash(ctx context.Context, key common.H
 	return res, nil
 }
 
-func (m *MemoryBackedStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (m *MemoryBackedStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

@@ -111,7 +111,7 @@ func (dasReader *PreimageDASReader) GetByHash(ctx context.Context, hash common.H
 	return dastree.Content(hash, oracle)
 }
 
-func (dasReader *PreimageDASReader) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (dasReader *PreimageDASReader) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -121,10 +121,6 @@ func (dasReader *PreimageDASReader) HealthCheck(ctx context.Context) error {
 
 func (dasReader *PreimageDASReader) ExpirationPolicy(ctx context.Context) (arbstate.ExpirationPolicy, error) {
 	return arbstate.DiscardImmediately, nil
-}
-
-func (dasReader *PreimageDASReader) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
-	return nil, nil
 }
 
 type BlobPreimageReader struct {

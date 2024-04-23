@@ -242,7 +242,7 @@ func (a *SimpleDASReaderAggregator) GetByHash(ctx context.Context, hash common.H
 	return nil, fmt.Errorf("data wasn't able to be retrieved from any DAS Reader: %v", errorCollection)
 }
 
-func (a *SimpleDASReaderAggregator) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (a *SimpleDASReaderAggregator) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

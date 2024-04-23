@@ -1,14 +1,12 @@
 package das
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/nitro/arbstate"
-	"net/http"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -33,12 +31,20 @@ func DomiconStorageServiceConfigAddOptions(prefix string, f *flag.FlagSet) {
 }
 
 type DomiconStorageService struct {
-	config DomiconStorageServiceConfig
+	config        DomiconStorageServiceConfig
+	domiconClient *rpc.Client
 }
 
 func NewDomiconStorageService(ctx context.Context, config DomiconStorageServiceConfig) (*DomiconStorageService, error) {
+	client, err := rpc.DialHTTP(config.Peer)
+	if err != nil {
+		log.Warn("failed to dial rpc endpoint: %v, err: %v", config.Peer, err)
+		return nil, err
+	}
+
 	return &DomiconStorageService{
-		config: config,
+		config:        config,
+		domiconClient: client,
 	}, nil
 }
 
@@ -46,35 +52,24 @@ func (s *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash)
 	return nil, nil
 }
 
-func (s *DomiconStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
-	log.Trace("das.DomiconStorageService.GetByCommitment", "commitment", hex.EncodeToString(commitment))
+func (s *DomiconStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
+	log.Trace("das.DomiconStorageService.GetByCommitment", "commitment", commitment)
 
-	id := 0
 	method := "eth_getFileDataByCommitment"
-	params := []string{hex.EncodeToString(commitment)}
 
-	// 准备 JSON 数据
-	jsonStr := []byte(fmt.Sprintf(`{"id":%d,"jsonrpc":"2.0","method":"%s","params":%q}`, id, method, params))
-
-	// 发送 POST 请求
-	resp, err := http.Post(s.config.Peer, "application/json", bytes.NewBuffer(jsonStr))
+	var result map[string]interface{}
+	err := s.domiconClient.CallContext(ctx, &result, method, commitment)
 	if err != nil {
 		log.Warn("Error sending request:", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	// 读取响应内容
-	var respBody bytes.Buffer
-	_, err = respBody.ReadFrom(resp.Body)
-	if err != nil {
-		log.Warn("Error reading response:", err)
-		return nil, err
-	}
+	//log.Debug((result["data"]).(string))
+	//log.Debug(result)
+	log.Debug((result["data"]).(string))
+	fmt.Println(common.Hex2Bytes((result["data"]).(string)))
 
-	log.Trace("Response:", respBody.String())
-
-	return respBody.Bytes(), nil
+	return common.Hex2Bytes((result["data"]).(string)), nil
 }
 
 func (s *DomiconStorageService) Put(ctx context.Context, data []byte, timeout uint64) error {

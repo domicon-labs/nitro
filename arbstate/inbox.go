@@ -228,6 +228,14 @@ func RecoverPayloadFromDasBatch(
 		return preimage, nil
 	}
 
+	getByCommitment := func(ctx context.Context, commitment string) ([]byte, error) {
+		preimage, err := dasReader.GetByCommitment(ctx, commitment)
+		if err != nil {
+			return nil, err
+		}
+		return preimage, nil
+	}
+
 	keysetPreimage, err := getByHash(ctx, cert.KeysetHash)
 	if err != nil {
 		log.Error("Couldn't get keyset", "err", err)
@@ -259,7 +267,9 @@ func RecoverPayloadFromDasBatch(
 	}
 
 	dataHash := cert.DataHash
-	payload, err := getByHash(ctx, dataHash)
+	commitment := cert.Commitment
+	//payload, err := getByHash(ctx, dataHash)
+	payload, err := getByCommitment(ctx, common.Bytes2Hex(commitment[:]))
 	if err != nil {
 		log.Error("Couldn't fetch DAS batch contents", "err", err)
 		return nil, err

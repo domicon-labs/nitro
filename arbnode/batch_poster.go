@@ -1282,7 +1282,7 @@ func (b *BatchPoster) maybePostSequencerBatch(ctx context.Context) (bool, error)
 	cert := arbstate.DataAvailabilityCertificate{
 		KeysetHash:  common.HexToHash("0x4D795E20D33EEA0B070600E4E100C512A750562BF03C300C99444BD5AF92D9B0"),
 		DataHash:    common.HexToHash("0xf8bb9a67839d1767e79afe52d21e97a04ee0bf5f816d5b52c10df60cccb7f822"),
-		CommitMent:  dataCM,
+		Commitment:  dataCM,
 		UserAddr:    userAddr,
 		UserIndex:   curIndex,
 		Timeout:     uint64(time.Now().Add(time.Hour * 24).Unix()),

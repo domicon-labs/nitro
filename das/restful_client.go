@@ -71,7 +71,7 @@ func (c *RestfulDasClient) GetByHash(ctx context.Context, hash common.Hash) ([]b
 	return decodedBytes, nil
 }
 
-func (c *RestfulDasClient) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (c *RestfulDasClient) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

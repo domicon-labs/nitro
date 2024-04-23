@@ -64,7 +64,7 @@ func (c *CacheStorageService) GetByHash(ctx context.Context, key common.Hash) ([
 	return val, nil
 }
 
-func (c *CacheStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (c *CacheStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

@@ -168,7 +168,7 @@ func (s *IpfsStorageService) GetByHash(ctx context.Context, hash common.Hash) ([
 	return dastree.Content(hash, oracle)
 }
 
-func (s *IpfsStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (s *IpfsStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

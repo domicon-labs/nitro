@@ -22,6 +22,10 @@ func (*dummyReader) GetByHash(context.Context, common.Hash) ([]byte, error) {
 	return nil, errors.New("not implemented")
 }
 
+func (*dummyReader) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
+	return nil, nil
+}
+
 func (*dummyReader) HealthCheck(context.Context) error {
 	return errors.New("not implemented")
 }

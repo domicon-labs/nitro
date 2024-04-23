@@ -60,7 +60,7 @@ func (r *RedundantStorageService) GetByHash(ctx context.Context, key common.Hash
 	return nil, anyError
 }
 
-func (r *RedundantStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (r *RedundantStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

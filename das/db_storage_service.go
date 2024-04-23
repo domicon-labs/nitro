@@ -146,7 +146,7 @@ func (dbs *DBStorageService) GetByHash(ctx context.Context, key common.Hash) ([]
 	return ret, err
 }
 
-func (dbs *DBStorageService) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+func (dbs *DBStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
 	return nil, nil
 }
 

@@ -152,7 +152,7 @@ func Serialize(c *arbstate.DataAvailabilityCertificate) []byte {
 	buf = append(buf, flags)
 	buf = append(buf, c.KeysetHash[:]...)
 	buf = append(buf, c.SerializeSignableFields()...)
-	buf = append(buf, c.CommitMent[:]...)
+	buf = append(buf, c.Commitment[:]...)
 	buf = append(buf, c.UserAddr[:]...)
 
 	var userIndexData [8]byte
