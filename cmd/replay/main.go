@@ -111,6 +111,10 @@ func (dasReader *PreimageDASReader) GetByHash(ctx context.Context, hash common.H
 	return dastree.Content(hash, oracle)
 }
 
+func (dasReader *PreimageDASReader) GetByCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
+	return nil, nil
+}
+
 func (dasReader *PreimageDASReader) HealthCheck(ctx context.Context) error {
 	return nil
 }
