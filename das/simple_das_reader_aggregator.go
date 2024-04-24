@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/rpc"
 	"math"
 	"strings"
 	"sync"
@@ -181,7 +182,7 @@ type SimpleDASReaderAggregator struct {
 func (a *SimpleDASReaderAggregator) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
 	a.readersMutex.RLock()
 	defer a.readersMutex.RUnlock()
-	log.Trace("das.SimpleDASReaderAggregator.GetByHash", "key", pretty.PrettyHash(hash), "this", a)
+	log.Info("das.SimpleDASReaderAggregator.GetByHash", "key", pretty.PrettyHash(hash), "this", a)
 
 	type dataErrorPair struct {
 		data []byte
@@ -243,7 +244,28 @@ func (a *SimpleDASReaderAggregator) GetByHash(ctx context.Context, hash common.H
 }
 
 func (a *SimpleDASReaderAggregator) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
-	return nil, nil
+	log.Info("das.SimpleDASReaderAggregator.GetByCommitment", "commitment: ", commitment)
+	method := "eth_getFileDataByCommitment"
+
+	peer := "http://13.212.115.195:8545"
+
+	domiconClient, err := rpc.DialHTTP(peer)
+	if err != nil {
+		log.Warn("failed to dial rpc endpoint: %v, err: %v", peer, err)
+		return nil, err
+	}
+
+	var result map[string]string
+	err = domiconClient.CallContext(ctx, &result, method, commitment)
+	if err != nil {
+		log.Warn("Error sending request:", err)
+		return nil, err
+	}
+
+	data := common.FromHex(result["data"])
+	log.Info("das.SimpleDASReaderAggregator.GetByCommitment", "commitment: ", commitment, " data: ", result["data"])
+
+	return data, nil
 }
 
 func (a *SimpleDASReaderAggregator) tryGetByHash(

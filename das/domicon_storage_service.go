@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/nitro/arbstate"
+	"github.com/offchainlabs/nitro/util/pretty"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -18,9 +19,9 @@ type DomiconStorageServiceConfig struct {
 }
 
 var DefaultDomiconStorageServiceConfig = DomiconStorageServiceConfig{
-	Enable:      false,
+	Enable:      true,
 	ReadTimeout: time.Minute,
-	Peer:        "",
+	Peer:        "http://13.212.115.195:8545",
 }
 
 func DomiconStorageServiceConfigAddOptions(prefix string, f *flag.FlagSet) {
@@ -48,11 +49,13 @@ func NewDomiconStorageService(ctx context.Context, config DomiconStorageServiceC
 }
 
 func (s *DomiconStorageService) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
+	log.Info("das.DomiconStorageService.GetByHash", "hash", pretty.PrettyHash(hash))
+
 	return nil, nil
 }
 
 func (s *DomiconStorageService) GetByCommitment(ctx context.Context, commitment string) ([]byte, error) {
-	log.Trace("das.DomiconStorageService.GetByCommitment", "commitment", commitment)
+	log.Info("das.DomiconStorageService.GetByCommitment", "commitment", commitment)
 
 	method := "eth_getFileDataByCommitment"
 

@@ -13,7 +13,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -23,7 +22,6 @@ import (
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbos/l1pricing"
 	"github.com/offchainlabs/nitro/arbutil"
-	"github.com/offchainlabs/nitro/das/dastree"
 	"github.com/offchainlabs/nitro/util/blobs"
 	"github.com/offchainlabs/nitro/zeroheavy"
 )
@@ -178,55 +176,59 @@ func RecoverPayloadFromDasBatch(
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 	keysetValidationMode KeysetValidationMode,
 ) ([]byte, error) {
-	var keccakPreimages map[common.Hash][]byte
-	if preimages != nil {
-		if preimages[arbutil.Keccak256PreimageType] == nil {
-			preimages[arbutil.Keccak256PreimageType] = make(map[common.Hash][]byte)
-		}
-		keccakPreimages = preimages[arbutil.Keccak256PreimageType]
-	}
+//	var keccakPreimages map[common.Hash][]byte
+//	if preimages != nil {
+//		if preimages[arbutil.Keccak256PreimageType] == nil {
+//			preimages[arbutil.Keccak256PreimageType] = make(map[common.Hash][]byte)
+//		}
+//		keccakPreimages = preimages[arbutil.Keccak256PreimageType]
+//	}
 	cert, err := DeserializeDASCertFrom(bytes.NewReader(sequencerMsg[40:]))
+	log.Info("php debug", "cert: ", cert, " err: ", err)
+	log.Info("php debug", "cert keysetHash: ", common.Bytes2Hex(cert.KeysetHash[:]))
+	log.Info("php debug", "cert commitment: ", common.Bytes2Hex(cert.Commitment[:]))
 	if err != nil {
 		log.Error("Failed to deserialize DAS message", "err", err)
 		return nil, nil
 	}
 	version := cert.Version
-	recordPreimage := func(key common.Hash, value []byte) {
-		keccakPreimages[key] = value
-	}
+//	recordPreimage := func(key common.Hash, value []byte) {
+//		keccakPreimages[key] = value
+//	}
 
 	if version >= 2 {
 		log.Error("Your node software is probably out of date", "certificateVersion", version)
 		return nil, nil
 	}
 
-	getByHash := func(ctx context.Context, hash common.Hash) ([]byte, error) {
-		newHash := hash
-		if version == 0 {
-			newHash = dastree.FlatHashToTreeHash(hash)
-		}
-
-		preimage, err := dasReader.GetByHash(ctx, newHash)
-		if err != nil && hash != newHash {
-			log.Debug("error fetching new style hash, trying old", "new", newHash, "old", hash, "err", err)
-			preimage, err = dasReader.GetByHash(ctx, hash)
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		switch {
-		case version == 0 && crypto.Keccak256Hash(preimage) != hash:
-			fallthrough
-		case version == 1 && dastree.Hash(preimage) != hash:
-			log.Error(
-				"preimage mismatch for hash",
-				"hash", hash, "err", ErrHashMismatch, "version", version,
-			)
-			return nil, ErrHashMismatch
-		}
-		return preimage, nil
-	}
+//	getByHash := func(ctx context.Context, hash common.Hash) ([]byte, error) {
+//		newHash := hash
+//		if version == 0 {
+//			newHash = dastree.FlatHashToTreeHash(hash)
+//		}
+//		log.Info("php debug", "hash: ", hash, " newHash: ", newHash)
+//		preimage, err := dasReader.GetByHash(ctx, newHash)
+//		if err != nil && hash != newHash {
+//			log.Debug("error fetching new style hash, trying old", "new", newHash, "old", hash, "err", err)
+//			preimage, err = dasReader.GetByHash(ctx, hash)
+//		}
+//		log.Info("php debug", "preimage: ", preimage, " err: ", err)
+//		if err != nil {
+//			return nil, err
+//		}
+//		log.Info("php debug", "crypto.Keccak256Hash(preimage): ", crypto.Keccak256Hash(preimage), " hash: ", hash)
+//		switch {
+//		case version == 0 && crypto.Keccak256Hash(preimage) != hash:
+//			fallthrough
+//		case version == 1 && dastree.Hash(preimage) != hash:
+//			log.Error(
+//				"preimage mismatch for hash",
+//				"hash", hash, "err", ErrHashMismatch, "version", version,
+//			)
+//			return nil, ErrHashMismatch
+//		}
+//		return preimage, nil
+//	}
 
 	getByCommitment := func(ctx context.Context, commitment string) ([]byte, error) {
 		preimage, err := dasReader.GetByCommitment(ctx, commitment)
@@ -236,37 +238,37 @@ func RecoverPayloadFromDasBatch(
 		return preimage, nil
 	}
 
-	keysetPreimage, err := getByHash(ctx, cert.KeysetHash)
-	if err != nil {
-		log.Error("Couldn't get keyset", "err", err)
-		return nil, err
-	}
-	if keccakPreimages != nil {
-		dastree.RecordHash(recordPreimage, keysetPreimage)
-	}
+//	keysetPreimage, err := getByHash(ctx, cert.KeysetHash)
+//	if err != nil {
+//		log.Error("Couldn't get keyset", "err", err)
+//		return nil, err
+//	}
+//	if keccakPreimages != nil {
+//		dastree.RecordHash(recordPreimage, keysetPreimage)
+//	}
 
-	keyset, err := DeserializeKeyset(bytes.NewReader(keysetPreimage), keysetValidationMode == KeysetDontValidate)
-	if err != nil {
-		logLevel := log.Error
-		if keysetValidationMode == KeysetPanicIfInvalid {
-			logLevel = log.Crit
-		}
-		logLevel("Couldn't deserialize keyset", "err", err, "keysetHash", cert.KeysetHash, "batchNum", batchNum)
-		return nil, nil
-	}
-	err = keyset.VerifySignature(cert.SignersMask, cert.SerializeSignableFields(), cert.Sig)
-	if err != nil {
-		log.Error("Bad signature on DAS batch", "err", err)
-		return nil, nil
-	}
+//	keyset, err := DeserializeKeyset(bytes.NewReader(keysetPreimage), keysetValidationMode == KeysetDontValidate)
+//	if err != nil {
+//		logLevel := log.Error
+//		if keysetValidationMode == KeysetPanicIfInvalid {
+//			logLevel = log.Crit
+//		}
+//		logLevel("Couldn't deserialize keyset", "err", err, "keysetHash", cert.KeysetHash, "batchNum", batchNum)
+//		return nil, nil
+//	}
+//	err = keyset.VerifySignature(cert.SignersMask, cert.SerializeSignableFields(), cert.Sig)
+//	if err != nil {
+//		log.Error("Bad signature on DAS batch", "err", err)
+//		return nil, nil
+//	}
 
-	maxTimestamp := binary.BigEndian.Uint64(sequencerMsg[8:16])
-	if cert.Timeout < maxTimestamp+MinLifetimeSecondsForDataAvailabilityCert {
-		log.Error("Data availability cert expires too soon", "err", "")
-		return nil, nil
-	}
+//	maxTimestamp := binary.BigEndian.Uint64(sequencerMsg[8:16])
+//	if cert.Timeout < maxTimestamp+MinLifetimeSecondsForDataAvailabilityCert {
+//		log.Error("Data availability cert expires too soon", "err", "")
+//		return nil, nil
+//	}
 
-	dataHash := cert.DataHash
+//	dataHash := cert.DataHash
 	commitment := cert.Commitment
 	//payload, err := getByHash(ctx, dataHash)
 	payload, err := getByCommitment(ctx, common.Bytes2Hex(commitment[:]))
@@ -275,15 +277,15 @@ func RecoverPayloadFromDasBatch(
 		return nil, err
 	}
 
-	if keccakPreimages != nil {
-		if version == 0 {
-			treeLeaf := dastree.FlatHashToTreeLeaf(dataHash)
-			keccakPreimages[dataHash] = payload
-			keccakPreimages[crypto.Keccak256Hash(treeLeaf)] = treeLeaf
-		} else {
-			dastree.RecordHash(recordPreimage, payload)
-		}
-	}
+//	if keccakPreimages != nil {
+//		if version == 0 {
+//			treeLeaf := dastree.FlatHashToTreeLeaf(dataHash)
+//			keccakPreimages[dataHash] = payload
+//			keccakPreimages[crypto.Keccak256Hash(treeLeaf)] = treeLeaf
+//		} else {
+//			dastree.RecordHash(recordPreimage, payload)
+//		}
+//	}
 
 	return payload, nil
 }
