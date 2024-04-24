@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	kzg_sdk "github.com/domicon-labs/kzg-sdk"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/nitro/blsSignatures"
 	"github.com/offchainlabs/nitro/domicon"
 	"math"
