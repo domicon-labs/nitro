@@ -19,4 +19,5 @@
 	url = https://github.com/WebAssembly/testsuite.git
 [submodule "nitro-testnode"]
 	path = nitro-testnode
-	url = https://github.com/OffchainLabs/nitro-testnode.git
+	url = https://github.com/domicon-labs/nitro-testnode.git
+	branch = orbit-anytrust
